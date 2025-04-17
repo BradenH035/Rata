@@ -1,0 +1,5 @@
+build ingredients database with ingredientCleaner.py
+Analyze patterns (identify keywords) with ingredientModel.py and add to dictionary
+Scrape websites and analyze recipes with RecipeWebScraper.py --> recipes_final.json
+Clean up output using final_product.py --> final_recipes_cleaned.json
+Upload final product to database using upload_json_to_db.py
