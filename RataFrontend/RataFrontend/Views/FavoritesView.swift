@@ -9,6 +9,7 @@ import SwiftData
 import SwiftUI
 
 struct FavoritesView: View {
+    @Environment(\.modelContext) private var modelContext
     let columns = [
         GridItem(.flexible()), GridItem(.flexible())
     ]
@@ -64,6 +65,7 @@ struct FavoritesView: View {
                 if !likedRecipes.isEmpty {
                     break
                 }
+
 
                 try? await Task.sleep(nanoseconds: checkInterval)
                 waited += checkInterval

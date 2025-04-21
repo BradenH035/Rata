@@ -23,7 +23,7 @@ struct DataImporter {
     
     
     @MainActor
-    func importData(username: String) async throws {
+    func importData(username: String) async throws -> Bool {
         let (recipes, httpResponse_recipes) = try await recipeLoader.loadRecs() // GET all recipes
         
         switch httpResponse_recipes.statusCode {
@@ -43,10 +43,14 @@ struct DataImporter {
                         image_url: recipe.image_url,
                         prep_time_text: recipe.prep_time_text,
                         cook_time_text: recipe.cook_time_text,
-                        ingredients: recipe.ingredients,
-                        keywords: recipe.keywords,
-                        instructions: recipe.instructions,
-                        instruction_step: recipe.instruction_step
+//                        ingredients: recipe.ingredients,
+//                        keywords: recipe.keywords,
+//                        instructions: recipe.instructions,
+//                        instruction_step: recipe.instruction_step
+                        ingredients: recipe.ingredients.map { Ingredient(ingredient: $0) },
+                        keywords: recipe.keywords.map { Keyword(keyword: $0) },
+                        instructions: recipe.instructions.map { Instruction(instruction: $0) },
+                        instruction_step: recipe.instruction_step.map { InstructionStep(instruction_step: $0) }
                     )
                     context.insert(recipeModel)
                     
@@ -54,13 +58,14 @@ struct DataImporter {
             }
             let profileModel = ProfileModel(
                 username: profile.username,
-                liked_recipes: profile.liked_recipes
+                liked_recipes: profile.liked_recipes.map { LikedRecipe(liked_recipe_id: $0)}
                 )
             context.insert(profileModel)
-            
+            return true
         default:
             break
         }
+        return false
     }
     
     @MainActor

@@ -10,7 +10,16 @@ import SwiftData
 
 struct WhatsHotView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \RecipeModel.likes, order: .reverse) var sortedModels: [RecipeModel]
+    // @Query(sort: \RecipeModel.likes, order: .reverse) var sortedModels: [RecipeModel]
+    static var fetchDescriptor: FetchDescriptor<RecipeModel> {
+        var descriptor = FetchDescriptor<RecipeModel>(
+            predicate: nil,
+            sortBy: [SortDescriptor(\.likes, order: .reverse)]
+        )
+        descriptor.fetchLimit = 20
+        return descriptor
+    }
+    @Query(WhatsHotView.fetchDescriptor) private var sortedModels: [RecipeModel]
     var username: String
     var body: some View {
         NavigationStack {

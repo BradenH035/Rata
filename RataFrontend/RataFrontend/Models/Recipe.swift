@@ -22,11 +22,15 @@ final class RecipeModel {
     var image_url: String?
     var prep_time_text: String?
     var cook_time_text: String?
-    var ingredients: [String]
-    var keywords: [String]
-    var instructions: [String]
-    var instruction_step: [String]
-
+//    var ingredients: [String]
+//    var keywords: [String]
+//    var instructions: [String]
+//    var instruction_step: [String]
+    var ingredients: [Ingredient]
+    var keywords: [Keyword]
+    var instructions: [Instruction]
+    var instruction_step: [InstructionStep]
+    
     init(
         recipe_id: Int? = nil,
         recipe_name: String? = nil,
@@ -39,10 +43,10 @@ final class RecipeModel {
         image_url: String? = nil,
         prep_time_text: String? = nil,
         cook_time_text: String? = nil,
-        ingredients: [String] = [],
-        keywords: [String] = [],
-        instructions: [String] = [],
-        instruction_step: [String] = []
+        ingredients: [Ingredient] = [],
+        keywords: [Keyword] = [],
+        instructions: [Instruction] = [],
+        instruction_step: [InstructionStep] = []
     ) {
         self.recipe_id = recipe_id
         self.recipe_name = recipe_name
@@ -65,7 +69,7 @@ final class RecipeModel {
 
 extension RecipeModel {
     func missingIngredientsCount(userIngredients: [String]) -> Int {
-        ingredients.filter { !userIngredients.contains($0) }.count
+        ingredients.filter { !userIngredients.contains($0.ingredient) }.count
     }
 }
 
@@ -93,6 +97,11 @@ struct Recipe: Decodable {
     let keywords: [String]
     let instructions: [String]
     let instruction_step: [String]
+    //    let ingredients: [Ingredient]
+    //    let keywords: [Keyword]
+    //    let instructions: [Instruction]
+    //    let instruction_step: [InstructionStep]
+    //
 }
 
 

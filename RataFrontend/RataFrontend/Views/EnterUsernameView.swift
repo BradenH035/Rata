@@ -16,6 +16,7 @@ struct EnterUsernameView: View {
     @State private var password: String = ""
     @State private var errorMessage: String?
     @State private var isNavigating: Bool = false
+    @State private var isLoading: Bool = false
     @State private var createAccount: Bool = false
     let recipeLoader = RecipeLoader()
     let profileLoader = ProfileLoader()
@@ -24,40 +25,46 @@ struct EnterUsernameView: View {
         NavigationStack {
             ZStack {
                 VStack {
-                    Text("Login")
-                    Form {
-                        HStack {
-                            Text("Username:")
-                            TextField(text: $username, prompt: Text("")){
-                                Text("Username")
-                            }
-                        }
-                        HStack {
-                            Text("Password:")
-                            SecureField(text: $password, prompt: Text("")) {
-                                Text("Password")
-                            }
-                        }
-                    } // End of Form
-                    
-                    HStack {
-                        Button("Sign In") {
-                            Task {
-                                do {
-                                    try await signIn(username: username, password: password)
-                                    isNavigating = true // Only navigate after sign-in is successful
-                                } catch {
-                                    errorMessage = error.localizedDescription
+                    if isLoading {
+                        ProgressView("Importing your recipes...")
+                            .padding()
+                        
+                    } else {
+                        Text("Login")
+                        Form {
+                            HStack {
+                                Text("Username:")
+                                TextField(text: $username, prompt: Text("")){
+                                    Text("Username")
                                 }
                             }
-                        }
-                        .padding()
-                        Button("Create Account") {
-                            createAccount = true
-                        }
-                    } // End of HStack
-                } // End of VStack
-                    
+                            HStack {
+                                Text("Password:")
+                                SecureField(text: $password, prompt: Text("")) {
+                                    Text("Password")
+                                }
+                            }
+                        } // End of Form
+                        
+                        HStack {
+                            Button("Sign In") {
+                                Task {
+                                    do {
+                                        try await signIn(username: username, password: password)
+                                        
+                                        isNavigating = true
+                                    } catch {
+                                        print("There was an error signing in")
+                                    }
+                                }
+                            }
+                            .padding()
+                            Button("Create Account") {
+                                createAccount = true
+                            }
+                        } // End of HStack
+                    } // End of VStack
+                }
                 // Navigation happens only when isNavigating is set to true
                 NavigationLink("", destination: ContentView(username: username), isActive: $isNavigating)
                     .hidden() // Hide the NavigationLink UI
@@ -101,18 +108,18 @@ struct EnterUsernameView: View {
 
 
 
-    private func startImport(user: Profile) {
+    private func startImport(user: Profile) async throws -> Bool {
         errorMessage = nil
-        Task {
-            do {
-                // Initialize DataImporter with the ModelContext and RecipeLoader
-                let dataImporter = DataImporter(profile: user, context: modelContext, recipeLoader: recipeLoader, profileLoader: profileLoader)
-                try await dataImporter.importData(username: username)
-            } catch {
-                errorMessage = error.localizedDescription
-                print("Error Message \(String(describing: errorMessage))")
-                }
-            }
+        do {
+            // Initialize DataImporter with the ModelContext and RecipeLoader
+            let dataImporter = DataImporter(profile: user, context: modelContext, recipeLoader: recipeLoader, profileLoader: profileLoader)
+            let doneLoading = try await dataImporter.importData(username: username) // should be true
+            return doneLoading
+        } catch {
+            errorMessage = error.localizedDescription
+            print("Error Message \(String(describing: errorMessage))")
+        }
+        return false
     }
     private func signIn(username: String, password: String) async throws {
         guard !username.isEmpty && !password.isEmpty else {
@@ -127,7 +134,15 @@ struct EnterUsernameView: View {
         guard let (user, _) = try await profileLoader.findProfile(username: username) else {
             throw NSError(domain: "SignInError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid login information\n\nNew User? Close this message and create an account below! \n\nForgot your password? Click this link to reset it."])
         }
-        startImport(user: user)
+        
+        do {
+            isLoading = true
+            try await isNavigating = startImport(user: user)
+            isLoading = false
+        } catch {
+            errorMessage = error.localizedDescription
+            print("Error Message \(String(describing: errorMessage))")
+        }
     }
 }
 

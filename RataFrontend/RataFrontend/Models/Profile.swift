@@ -25,9 +25,9 @@ enum ProfileUploadError: Error {
 @Model
 final class ProfileModel {
     var username: String
-    var liked_recipes: [Int] // recipe_id
+    var liked_recipes: [LikedRecipe] // recipe_id
     
-    init(username: String, liked_recipes: [Int] = []) {
+    init(username: String, liked_recipes: [LikedRecipe] = []) {
         self.username = username
         self.liked_recipes = liked_recipes
     }

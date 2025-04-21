@@ -27,7 +27,7 @@ struct ContentView: View {
         guard let profile = profile else { return [] }
         return recipeModels.filter { recipe in
             if let id = recipe.recipe_id {
-                return profile.liked_recipes.contains(id)
+                return profile.liked_recipes.contains(where: {$0.liked_recipe_id == id } )
             }
             return false
         }

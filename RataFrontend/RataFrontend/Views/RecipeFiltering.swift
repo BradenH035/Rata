@@ -98,7 +98,7 @@ struct RecipeView2: View {
             }
             filteredRecipes = allRecipes.filter { recipe in
                 ingredients.allSatisfy { ingredient in
-                    recipe.keywords.contains { $0.lowercased().contains(ingredient.lowercased()) }
+                    recipe.keywords.contains { $0.keyword.lowercased().contains(ingredient.lowercased()) }
                 }
             }
             onlyIngredientsFiltered = filteredRecipes
@@ -117,8 +117,8 @@ struct RecipeView2: View {
     private func moreFiltering(filter: String) {
         if filter == "Number of missing ingredients" {
             filteredRecipes = filteredRecipes.sorted { recipeA, recipeB in
-                let missingA = recipeA.ingredients.filter { !ingredients.contains($0) }.count
-                let missingB = recipeB.ingredients.filter { !ingredients.contains($0) }.count
+                let missingA = recipeA.ingredients.filter { !ingredients.contains($0.ingredient) }.count
+                let missingB = recipeB.ingredients.filter { !ingredients.contains($0.ingredient) }.count
                 return missingA < missingB
             }
         }
@@ -157,7 +157,7 @@ struct RecipeView2: View {
                         .padding()
                 } else {
                     LazyVGrid(columns: columns, spacing: 20) {
-                        ForEach(filteredRecipes, id: \.self) { recipe in
+                        ForEach(filteredRecipes, id: \.recipe_id) { recipe in
                             NavigationLink(destination: RecipeDetails(recipe: recipe, username: username)) {
                                 RecipeCard(recipe: recipe)
                             }
@@ -185,14 +185,15 @@ struct RecipeView2: View {
 
 
 struct RecipeDetails: View {
+    @Environment(\.modelContext) private var modelContext
     let recipe: RecipeModel // Pass recipe as a regular property
-    @State private var isLiked: Bool = false
     @Query var allProfiles: [ProfileModel]
     
     var username: String
     var profile: ProfileModel? {
         allProfiles.first { $0.username == username }
     }
+    @State private var isLiked: Bool = false
     
     func toggleLike() async throws {
         guard let recipeName = recipe.recipe_name else {
@@ -217,8 +218,6 @@ struct RecipeDetails: View {
         }
         request.httpBody = try JSONEncoder().encode(LikeRequest(username: username))
         
-        
-        
         do {
             let (_, response) = try await URLSession.shared.data(for: request)
             
@@ -229,6 +228,17 @@ struct RecipeDetails: View {
             guard (200..<300).contains(httpResponse.statusCode) else {
                 throw LikeError.serverError(statusCode: httpResponse.statusCode)
             }
+            // update context
+            if isLiked {
+                if !profile!.liked_recipes.contains(where: {$0.liked_recipe_id == recipe.recipe_id! }) {
+                    profile!.liked_recipes.append(LikedRecipe(liked_recipe_id: recipe.recipe_id!))
+                }
+            } else {
+                profile!.liked_recipes.removeAll { $0.liked_recipe_id == recipe.recipe_id! }
+            }
+            
+            try modelContext.save()
+
         } catch {
             // Revert on failure
             isLiked = oldValue
@@ -255,7 +265,6 @@ struct RecipeDetails: View {
                                 .padding()
                             HStack {
                                 Button {
-                                    print("Button Tapped!")
                                     Task {
                                         do {
                                             try await toggleLike()
@@ -301,7 +310,7 @@ struct RecipeDetails: View {
                     
                     if !recipe.ingredients.isEmpty {
                         LazyVStack(alignment: .leading) {
-                            ForEach(recipe.ingredients, id: \.self) { ingredient in
+                            ForEach(recipe.ingredients, id: \.ingredient) { ingredient in
                                 Text("• \(ingredient)")
                                     .padding()
                             }
@@ -318,8 +327,8 @@ struct RecipeDetails: View {
                     
                     if !recipe.instructions.isEmpty {
                         LazyVStack(alignment: .leading) {
-                            ForEach(Array(zip(recipe.instruction_step, recipe.instructions)), id: \.1) { step, instruction in
-                                Text("\(step): \(instruction)")
+                            ForEach(Array(zip(recipe.instruction_step, recipe.instructions)), id: \.0.instruction_step) { step, instruction in
+                                Text("\(step.instruction_step): \(instruction.instruction)")
                                     .padding()
 
                             }
@@ -328,6 +337,12 @@ struct RecipeDetails: View {
                         Text("No instructions available.")
                     }
                 }
+            }
+        }
+        .onAppear {
+            if let profile = profile,
+               let recipeId = recipe.recipe_id {
+                isLiked = profile.liked_recipes.contains(where: {$0.liked_recipe_id == recipeId })
             }
         }
     }
